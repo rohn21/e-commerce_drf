@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
@@ -21,10 +21,14 @@ class Order(models.Model):
     order_date = models.DateField(auto_now_add=True)
     address = models.CharField(max_length=200)
     
+    # order number with order_id and prefix
     def save(self, *args, **kwargs):
-        if not self.order_number:
-            self.order_number = f'ORD{self.id:05d}'
-        super(Order, self).save(*args, **kwargs)
+        with transaction.atomic():
+            if not self.pk:
+                super(Order, self).save(*args, **kwargs)
+            if not self.order_number:
+                self.order_number = f'ORD{self.pk:05d}'
+                super(Order, self).save(update_fields=['order_number'])
         
     def __str__(self):
         return self.order_number
